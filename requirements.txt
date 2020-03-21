@@ -1,0 +1,4 @@
+discord
+environs
+requests
+schedule
