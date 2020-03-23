@@ -105,7 +105,7 @@ class KurisuBot(discord.Client):
     def _update_schedule(self):
         print('Updating daily schedule')
         schedule.clear('daily_events')
-        then = datetime.now() + timedelta(days=1)
+        then = (datetime.now() + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
         daily_events = filter(lambda e: e['start'] < then, self.scraper.scrape())
         for event in daily_events:
             # this should really be done using UTC timestamps tbh
