@@ -95,10 +95,11 @@ class KurisuBot(discord.Client):
 
     async def on_ready(self):
         print('Kurisu ready uwu')
+        self._update_schedule()
         schedule.every().day.at('00:00').do(self._update_schedule)
 
     def _notify_lecture(self, event):
-        asyncio.run_coroutine_threadsafe(get_channel(self.notify_channel).send(f'Lesson {event["title"]} starting in 10 minutes @everyone ({events["teams_link"]})'), self.loop)
+        asyncio.run_coroutine_threadsafe(self.get_channel(self.notify_channel).send(f'Lesson {event["title"]} starting in 10 minutes @everyone ({events["teams_link"]})'), self.loop)
 
     def _update_schedule(self):
         print('Updating daily schedule')
