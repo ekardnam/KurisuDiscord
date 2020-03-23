@@ -36,8 +36,9 @@ class Scraper(object):
 
 
 class KurisuBot(discord.Client):
-    def __init__(self, notify_channel):
+    def __init__(self, notify_channel, offset):
         super(KurisuBot, self).__init__()
+        self.hour_offset = offset
         self.notify_channel = notify_channel
         self.scraper = Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=2&curricula=')
 
@@ -99,7 +100,7 @@ class KurisuBot(discord.Client):
         schedule.every().day.at('00:00').do(self._update_schedule)
 
     def _notify_lecture(self, event):
-        asyncio.run_coroutine_threadsafe(self.get_channel(self.notify_channel).send(f'Lesson {event["title"]} starting in 10 minutes @everyone ({events["teams_link"]})'), self.loop)
+        asyncio.run_coroutine_threadsafe(self.get_channel(self.notify_channel).send(f'Lesson {event["title"]} starting in 10 minutes @everyone ({event["teams_link"]})'), self.loop)
 
     def _update_schedule(self):
         print('Updating daily schedule')
@@ -107,7 +108,8 @@ class KurisuBot(discord.Client):
         then = datetime.now() + timedelta(days=1)
         daily_events = filter(lambda e: e['start'] < then, self.scraper.scrape())
         for event in daily_events:
-            hour = (event['start'] - timedelta(minutes=10)).strftime('%H:%M')
+            # this should really be done using UTC timestamps tbh
+            hour = (event['start'] - timedelta(hours=self.hour_offset, minutes=10)).strftime('%H:%M')
             schedule.every().day.at(hour).do(
                 self._notify_lecture, event
             ).tag('daily_events')
@@ -122,5 +124,5 @@ class KurisuBot(discord.Client):
 if __name__ == '__main__':
     env = environs.Env()
     env.read_env()
-    kurisu = KurisuBot(int(env('NOTIFY_CHANNEL')))
+    kurisu = KurisuBot(int(env('NOTIFY_CHANNEL')), int(env('HOUR_OFFSET')))
     kurisu.run(env('DISCORD_TOKEN'))
