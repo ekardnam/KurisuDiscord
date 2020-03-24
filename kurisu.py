@@ -67,6 +67,20 @@ class KurisuBot(discord.Client):
     async def _quote_command(self, channel, args):
         await channel.send(random.choice(self.quotes))
 
+    def create_embed(self, daily, channel):
+        embed = discord.Embed()
+        day = daily[0]["start"].strftime("%A")
+        embed.add_field(name="Title", value="{}'s schedule".format(day), inline=False)
+        for event in daily:
+            title = event["title"]
+            if '/' in title:
+                title = title[:title.find('/')]
+            embed.add_field(name="Course", value=title, inline=True)
+            embed.add_field(name="Prof.", value=event["prof"], inline=True)
+            embed.add_field(name="Time", value=event["time"], inline=True)
+            # embed.add_field(name="Link", value="[link]("+event["teams_link"]+")", inline=False)
+        return embed
+
     async def _calendar_command(self, channel, args):
         events = self.scraper.scrape()
         days = 7
@@ -78,8 +92,14 @@ class KurisuBot(discord.Client):
                 return
         await channel.send(f'Lectures of the next {days} days')
         then = datetime.now() + timedelta(days=days)
-        for event in filter(lambda event: event['start'] < then, events):
-            await channel.send(f'{event["title"]}, {event["prof"]} - {event["start"].strftime("%A")} {event["time"]}: {event["teams_link"]}')
+        events = filter(lambda event: event['start'] < then, events)
+        week_days = [[] for i in range(7)]
+
+        for event in events:
+            week_days[event["start"].weekday()].append(event)
+
+        for daily in filter(lambda day: day, week_days):
+            await channel.send(embed=self.create_embed(daily, channel))
 
     async def on_message(self, message):
         if message.author == self.user:
@@ -100,7 +120,17 @@ class KurisuBot(discord.Client):
         schedule.every().day.at('00:00').do(self._update_schedule)
 
     def _notify_lecture(self, event):
-        asyncio.run_coroutine_threadsafe(self.get_channel(self.notify_channel).send(f'Lesson {event["title"]} starting in 10 minutes @everyone ({event["teams_link"]})'), self.loop)
+        embed = discord.Embed()
+        title = event["title"]
+        if '/' in title:
+            title = title[:find('/')]
+        embed.add_field(name="Course", value = title, inline=True)
+        embed.add_field(name="Prof", value=event["prof"], inline=True)
+        embed.add_field(name="Time", value=event["time"], inline=True)
+        asyncio.run_coroutine_threadsafe(self.get_channel(self.notify_channel).send(f'Lesson starting in 10 minutes @everyone ({event["teams_link"]})'), self.loop)
+        asyncio.run_coroutine_threadsafe(self.get_channel(self.notify_channel).send(embed=embed), self.loop)
+
+
 
     def _update_schedule(self):
         print('Updating daily schedule')
