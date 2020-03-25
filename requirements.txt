@@ -1,4 +1,6 @@
 discord
 environs
+gTTS
+pyNaCl
 requests
 schedule
