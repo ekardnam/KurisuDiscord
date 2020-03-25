@@ -1,0 +1,2 @@
+https://elements.heroku.com/buildpacks/heroku/heroku-buildpack-python
+https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git
