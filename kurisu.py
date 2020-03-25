@@ -188,6 +188,8 @@ class KurisuBot(discord.Client):
     def run(self, token):
         print('Starting Kurisu')
         self.scheduler_thread.start()
+        if not discord.opus.is_loaded():
+            discord.opus.load_opus('opus/lib/libopus.so.0')
         super(KurisuBot, self).run(token)
 
 
