@@ -3,9 +3,11 @@
 import asyncio
 import discord
 import environs
+import googletrans
 import gtts
 import json
 import os
+import pykakasi
 import random
 import requests
 import schedule
@@ -22,6 +24,23 @@ def delete_if_exists(filename):
         os.unlink(filename)
     except FileNotFoundError:
         pass
+
+def translate_italian_to_japanese(text):
+    translator = googletrans.Translator()
+    return translator.translate(text, src='it', dest='ja').text
+
+def japanese_to_romaji(text):
+    kakasi = pykakasi.kakasi()
+    kakasi.setMode('H', 'a')
+    kakasi.setMode('K', 'a')
+    kakasi.setMode('J', 'a')
+    kakasi.setMode('s', True)
+    conv = kakasi.getConverter()
+    return conv.do(text)
+
+def create_japanese_voice(text, outfile):
+    tts = gtts.gTTS(text=text, lang='ja')
+    tts.save(outfile)
 
 class Scraper(object):
     def __init__(self, url):
@@ -90,6 +109,21 @@ class KurisuBot(discord.Client):
             embed.add_field(name='Teams', value=f'[Click!]({event["teams_link"]})', inline=False)
         return embed
 
+    async def _play_audio(self, voice_channel, audio):
+        if not self.voice_client or not self.voice_client.is_connected():
+            self.voice_client = await voice_channel.connect()
+        else:
+            while self.voice_client.is_playing():
+                await asyncio.sleep(1)
+            if not self.voice_client.channel.name == voice_channel.name:
+                await self.voice_client.move_to(voice_channel)
+        self.voice_client.play(audio)
+
+    async def _wait_if_playing(self):
+        if self.voice_client:
+            while self.voice_client.is_playing():
+                await asyncio.sleep(1)
+
     async def _quote_command(self, channel, args, user):
         await channel.send(random.choice(self.quotes))
 
@@ -102,19 +136,11 @@ class KurisuBot(discord.Client):
             return
         voice_channel = user.voice.channel
 
-        if not self.voice_client or not self.voice_client.is_connected():
-            self.voice_client = await voice_channel.connect()
-        else:
-            while self.voice_client.is_playing():
-                await asyncio.sleep(1)
-            if not self.voice_client.channel.name == voice_channel.name:
-                await self.voice_client.move_to(voice_channel)
+        await self._wait_if_playing()
 
         delete_if_exists('audio.mp3')
-        tts = gtts.gTTS(text=' '.join(args[1:]), lang='ja')
-        tts.save('audio.mp3')
-
-        self.voice_client.play(discord.FFmpegPCMAudio('audio.mp3'))
+        create_japanese_voice(' '.join(args[1:]), 'audio.mp3')
+        await self._play_audio(voice_channel, discord.FFmpegPCMAudio('audio.mp3'))
 
     async def _calendar_command(self, channel, args, user):
         events = self.scraper.scrape()
@@ -140,6 +166,43 @@ class KurisuBot(discord.Client):
             if group:
                 await channel.send(embed=self._create_daily_embed(group, channel))
 
+    async def _tj_command(self, channel, args, user):
+        if len(args) < 2:
+            await channel.send('Usage: -tj <sentence in italian>')
+            return
+        text = translate_italian_to_japanese(' '.join(args[1:]))
+        await channel.send(f'Kanji: {text}\nRomaji: {japanese_to_romaji(text)}')
+
+    async def _tjsay_command(self, channel, args, user):
+        if len(args) < 2:
+            await channel.send('Usage: -tjsay <sentence in italian>')
+            return
+        if not user.voice:
+            await channel.send('You have to be in a voice channel BAKA')
+            return
+        voice_channel = user.voice.channel
+
+        await self._wait_if_playing()
+
+        delete_if_exists('audio.mp3')
+        create_japanese_voice(translate_italian_to_japanese(' '.join(args[1:])), 'audio.mp3')
+        await self._play_audio(voice_channel, discord.FFmpegPCMAudio('audio.mp3'))
+
+    async def _kuristina_command(self, channel, args, user):
+        if not user.voice:
+            await channel.send('You have to be in a voice channel BAKA')
+            return
+        voice_channel = user.voice.channel
+        await self._play_audio(voice_channel, discord.FFmpegPCMAudio('audio/KURISUTINA.mp3'))
+
+    async def _tutturu_command(self, channel, args, user):
+        if not user.voice:
+            await channel.send('You have to be in a voice channel BAKA')
+            return
+        voice_channel = user.voice.channel
+        tutturus = ['audio/OKARIN.mp3', 'audio/DESU.mp3']
+        await self._play_audio(voice_channel, discord.FFmpegPCMAudio(random.choice(tutturus)))
+
     async def on_message(self, message):
         if message.author == self.user:
             return
@@ -156,6 +219,18 @@ class KurisuBot(discord.Client):
             if args[0] == '-jap':
                 await self._jap_command(message.channel, args, message.author)
 
+            if args[0] == '-tj':
+                await self._tj_command(message.channel, args, message.author)
+
+            if args[0] == '-tjsay':
+                await self._tjsay_command(message.channel, args, message.author)
+
+            if args[0] == '-kuristina':
+                await self._kuristina_command(message.channel, args, message.author)
+
+            if args[0] == '-tutturu':
+                await self._tutturu_command(message.channel, args, message.author)
+
     async def on_ready(self):
         print('Kurisu ready uwu')
         self._update_schedule()
@@ -170,7 +245,6 @@ class KurisuBot(discord.Client):
         embed.add_field(name='Teams', value=f'[Click!]({event["teams_link"]})')
         asyncio.run_coroutine_threadsafe(self.get_channel(self.notify_channel).send(embed=embed), self.loop)
         asyncio.run_coroutine_threadsafe(self.get_channel(self.notify_channel).send('@everyone'), self.loop)
-
 
     def _update_schedule(self):
         print('Updating daily schedule')

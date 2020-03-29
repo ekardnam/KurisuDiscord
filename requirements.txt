@@ -1,6 +1,8 @@
 discord
 environs
+googletrans
 gTTS
+pykakasi
 pyNaCl
 requests
 schedule
