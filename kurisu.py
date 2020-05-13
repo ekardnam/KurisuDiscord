@@ -38,8 +38,8 @@ def japanese_to_romaji(text):
     conv = kakasi.getConverter()
     return conv.do(text)
 
-def create_japanese_voice(text, outfile):
-    tts = gtts.gTTS(text=text, lang='ja')
+def create_voice(text, outfile, lang='ja'):
+    tts = gtts.gTTS(text=text, lang=lang)
     tts.save(outfile)
 
 class Scraper(object):
@@ -127,6 +127,21 @@ class KurisuBot(discord.Client):
     async def _quote_command(self, channel, args, user):
         await channel.send(random.choice(self.quotes))
 
+    async def _rus_command(self, channel, args, user):
+        if len(args) < 2:
+            await channel.send('Usage: -rus <sentence>')
+            return
+        if not user.voice:
+            await channel.send('You have to be in a voice channel to use this command! BAKA')
+            return
+        voice_channel = user.voice.channel
+
+        await self._wait_if_playing()
+
+        delete_if_exists('audio.mp3')
+        create_voice(' '.join(args[1:]), 'audio.mp3', lang='ru')
+        await self._play_audio(voice_channel, discord.FFmpegPCMAudio('audio.mp3'))
+
     async def _jap_command(self, channel, args, user):
         if len(args) < 2:
             await channel.send('Usage: -jap <sentence>')
@@ -139,7 +154,7 @@ class KurisuBot(discord.Client):
         await self._wait_if_playing()
 
         delete_if_exists('audio.mp3')
-        create_japanese_voice(' '.join(args[1:]), 'audio.mp3')
+        create_voice(' '.join(args[1:]), 'audio.mp3')
         await self._play_audio(voice_channel, discord.FFmpegPCMAudio('audio.mp3'))
 
     async def _calendar_command(self, channel, args, user):
@@ -218,6 +233,9 @@ class KurisuBot(discord.Client):
 
             if args[0] == '-jap':
                 await self._jap_command(message.channel, args, message.author)
+
+            if args[0] == '-rus':
+                await self._rus_command(message.channel, args, message.author)
 
             if args[0] == '-tj':
                 await self._tj_command(message.channel, args, message.author)
