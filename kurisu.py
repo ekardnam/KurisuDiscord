@@ -71,7 +71,7 @@ class KurisuBot(discord.Client):
         self.voice_client = None
         self.hour_offset = offset
         self.notify_channel = notify_channel
-        self.scraper = Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=2&curricula=')
+        self.scraper = Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=3&curricula=')
 
         self.stop_event = threading.Event()
 
