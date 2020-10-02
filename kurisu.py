@@ -56,12 +56,12 @@ class Scraper(object):
             'start': datetime.strptime(event['start'], self.dateformat),
             'end': datetime.strptime(event['end'], self.dateformat),
             'title': event['title'],
-            'room': event['aule'],
+            'room': event['aule'][0],
             'teams_link': event['teams'],
             'note': event['note'],
             'prof': event['docente'],
             'time': event['time']
-        }, data['events']))))
+        }, data))))
 
 
 
