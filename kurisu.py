@@ -70,7 +70,9 @@ class KurisuBot(discord.Client):
         self.voice_client = None
         self.hour_offset = offset
         self.notify_channel = notify_channel
-        self.scraper = Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=3&curricula=')
+        self.first_year_scraper = Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=1&curricula=')
+        self.second_year_scraper = Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=2&curricula=')
+        self.third_year_scraper = Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=3&curricula=')
 
         self.stop_event = threading.Event()
 
@@ -156,8 +158,8 @@ class KurisuBot(discord.Client):
         create_voice(' '.join(args[1:]), 'audio.mp3')
         await self._play_audio(voice_channel, discord.FFmpegPCMAudio('audio.mp3'))
 
-    async def _calendar_command(self, channel, args, user):
-        events = self.scraper.scrape()
+    async def _calendar_command(self, channel, args, user, scraper):
+        events = scraper.scrape()
         days = 7
         if len(args) > 1:
             try:
@@ -228,7 +230,12 @@ class KurisuBot(discord.Client):
                 await self._quote_command(message.channel, args, message.author)
 
             if args[0] == '-calendar':
-                await self._calendar_command(message.channel, args, message.author)
+                if args[1] == 'first':
+                    await self._calendar_command(message.channel, args, message.author, self.first_year_scraper)
+                if args[1] == 'second':
+                    await self._calendar_command(message.channel, args, message.author, self.second_year_scraper)
+                if args[1] == 'third':
+                    await self._calendar_command(message.channel, args, message.author, self.third_year_scraper)
 
             if args[0] == '-jap':
                 await self._jap_command(message.channel, args, message.author)
