@@ -70,9 +70,9 @@ class KurisuBot(discord.Client):
         self.voice_client = None
         self.hour_offset = offset
         self.notify_channel = notify_channel
-        self.first_year_scraper = Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=1&curricula=')
-        self.second_year_scraper = Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=2&curricula=')
-        self.third_year_scraper = Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=3&curricula=')
+        self.scrapers = [Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=1&curricula='),
+                         Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=2&curricula='),
+                         Scraper('https://corsi.unibo.it/laurea/fisica/orario-lezioni/@@orario_reale_json?anno=3&curricula=')]
 
         self.stop_event = threading.Event()
 
@@ -231,11 +231,11 @@ class KurisuBot(discord.Client):
 
             if args[0] == '-calendar':
                 if args[1] == 'first':
-                    await self._calendar_command(message.channel, args, message.author, self.first_year_scraper)
+                    await self._calendar_command(message.channel, args, message.author, self.scrapers[0])
                 if args[1] == 'second':
-                    await self._calendar_command(message.channel, args, message.author, self.second_year_scraper)
+                    await self._calendar_command(message.channel, args, message.author, self.scrapers[1])
                 if args[1] == 'third':
-                    await self._calendar_command(message.channel, args, message.author, self.third_year_scraper)
+                    await self._calendar_command(message.channel, args, message.author, self.scrapers[2])
 
             if args[0] == '-jap':
                 await self._jap_command(message.channel, args, message.author)
@@ -274,7 +274,7 @@ class KurisuBot(discord.Client):
         print('Updating daily schedule')
         schedule.clear('daily_events')
         then = (datetime.now() + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        daily_events = filter(lambda e: e['start'] < then, self.scraper.scrape())
+        daily_events = filter(lambda e: e['start'] < then, self.scrapers[2].scrape())
         for event in daily_events:
             # this should really be done using UTC timestamps tbh
             hour = (event['start'] - timedelta(hours=self.hour_offset, minutes=10)).strftime('%H:%M')
