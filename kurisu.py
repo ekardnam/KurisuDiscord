@@ -158,15 +158,23 @@ class KurisuBot(discord.Client):
         create_voice(' '.join(args[1:]), 'audio.mp3')
         await self._play_audio(voice_channel, discord.FFmpegPCMAudio('audio.mp3'))
 
-    async def _calendar_command(self, channel, args, user, scraper):
-        events = scraper.scrape()
+    async def _calendar_command(self, channel, args, user):
         days = 7
+        index = 2
+        if len(args) > 2:
+            options = ['first', 'second', 'third']
+            try:
+                index = options.index(args[2])
+            except ValueError:
+                await channel.send('Usage: -calendar [number_of_days] [first/second/third]')
+                return
         if len(args) > 1:
             try:
                 days = int(args[1])
             except ValueError:
-                await channel.send('Usage: -calendar [number_of_days]')
+                await channel.send('Usage: -calendar [number_of_days] [first/second/third]')
                 return
+        events = self.scrapers[index].scrape()
         await channel.send(f'Lectures of the next {days} days')
         now = datetime.now()
         then = now + timedelta(days=days)
@@ -230,12 +238,7 @@ class KurisuBot(discord.Client):
                 await self._quote_command(message.channel, args, message.author)
 
             if args[0] == '-calendar':
-                if args[1] == 'first':
-                    await self._calendar_command(message.channel, args, message.author, self.scrapers[0])
-                if args[1] == 'second':
-                    await self._calendar_command(message.channel, args, message.author, self.scrapers[1])
-                if args[1] == 'third':
-                    await self._calendar_command(message.channel, args, message.author, self.scrapers[2])
+                await self._calendar_command(message.channel, args, message.author)
 
             if args[0] == '-jap':
                 await self._jap_command(message.channel, args, message.author)
